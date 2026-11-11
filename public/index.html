@@ -36,15 +36,21 @@
             <form id="joinForm">
               <label for="guestName">Como podemos te chamar?</label>
               <input id="guestName" autocomplete="given-name" maxlength="32" placeholder="Seu nome ou apelido" required minlength="2">
+              <div id="guestInviteGroup" class="invite-code-group" hidden>
+                <label for="guestAccessCode">Código individual do convite</label>
+                <input id="guestAccessCode" autocomplete="one-time-code" maxlength="11" placeholder="AG-XXXXXXXX" autocapitalize="characters" spellcheck="false">
+                <small>Peça o seu código ao organizador. Cada código vale para apenas uma conta.</small>
+              </div>
+              <p id="registrationClosedNotice" class="registration-closed" hidden>🔒 Novos cadastros estão encerrados. Procure o organizador.</p>
               <button class="btn btn-pink btn-large" type="submit">🎉 ENTRAR NO LEILÃO</button>
             </form>
-            <small>Os créditos são fictícios. Não há pagamento real.</small>
+            <small>Os créditos são fictícios. Não há pagamento real. Para evitar duplicatas, permitimos uma conta por navegador/aparelho.</small>
           </div>
           <div id="guestDashboard" hidden>
             <div class="balance-card">
               <div><div class="hello-label" id="helloGuest">Olá, convidado! 👋</div><div class="balance-label">Seu saldo de créditos:</div></div>
               <div class="credit-pill"><span class="coin">★</span><span id="guestCredits">R$ 1.000,00</span></div>
-              <div class="balance-footer"><span>🪄 Dinheiro de brincadeira</span><button class="text-link" id="switchGuestBtn" type="button">Trocar participante</button></div>
+              <div class="balance-footer"><span>🪄 Dinheiro de brincadeira</span><span class="single-device-note">🔒 1 conta por aparelho</span></div>
             </div>
             <article class="item-card paper-card" id="guestItemCard">
               <div class="item-card-top"><span class="round-pill">🎁 SURPRESA DA VEZ</span><span id="guestStatus" class="status-chip">Aguardando</span></div>
@@ -59,6 +65,14 @@
               <div id="guestBidPanel" class="bid-panel">
                 <label>Escolha seu lance:</label>
                 <div class="bid-options" id="bidOptions"></div>
+                <div class="free-bid-container">
+                  <label for="guestFreeBid">💜 Ou digite seu lance livre</label>
+                  <div class="free-bid-line">
+                    <span class="currency-prefix">R$</span>
+                    <input id="guestFreeBid" type="number" inputmode="numeric" min="1" max="1000" step="1" placeholder="Ex.: 375" aria-describedby="freeBidHelp">
+                  </div>
+                  <small id="freeBidHelp">Informe um valor inteiro igual ou maior que o lance mínimo.</small>
+                </div>
                 <button class="btn btn-purple btn-large btn-gavel" id="placeBidBtn" type="button">🔨 DAR LANCE</button>
                 <p class="bid-note" id="bidNote">Se vencer, seus créditos serão descontados.</p>
               </div>
@@ -121,13 +135,24 @@
         <div id="adminDashboard" hidden>
           <div class="admin-heading"><div><div class="eyebrow">CENTRAL DE CONTROLE</div><h1>🎁 Painel do Leiloeiro</h1><p>Prepare os pacotes secretos e comande cada rodada direto do celular.</p></div><button type="button" class="btn btn-pink" id="addPackageBtn">＋ Novo pacote</button></div>
           <div id="storageWarning" class="storage-warning" hidden>⚠️ Modo de demonstração: sem MONGODB_URI, os cadastros e lances serão perdidos quando o servidor reiniciar.</div>
+          <section class="admin-panel registration-panel">
+            <div class="panel-heading"><h2>🔐 Controle de cadastros</h2><span>Evite contas duplicadas</span></div>
+            <p class="registration-explainer">Uma conta por navegador/aparelho é aplicada automaticamente. Para impedir que alguém use outro navegador ou aba anônima, ative <strong>códigos individuais de uso único</strong>.</p>
+            <div class="registration-switches">
+              <label class="registration-setting"><input id="adminRegistrationOpen" type="checkbox" checked> <span><b>Permitir novos cadastros</b><small>Desative quando todos os convidados já estiverem cadastrados.</small></span></label>
+              <label class="registration-setting"><input id="adminInviteOnly" type="checkbox"> <span><b>Exigir código individual</b><small>Cada código serve para cadastrar apenas um convidado, mesmo em outro aparelho.</small></span></label>
+            </div>
+            <div class="registration-actions"><button class="btn btn-purple btn-small" type="button" id="saveRegistrationBtn">💾 Salvar regras</button><label for="adminCodeCount">Gerar códigos:</label><select id="adminCodeCount"><option value="10">10</option><option value="20">20</option><option value="30">30</option><option value="50">50</option></select><button class="btn btn-pink btn-small" type="button" id="generateCodesBtn">＋ Gerar códigos</button><button class="btn btn-outline btn-small" type="button" id="copyCodesBtn">📋 Copiar disponíveis</button></div>
+            <div id="adminCodesSummary" class="codes-summary">Nenhum código gerado.</div>
+            <div id="adminCodesList" class="codes-list" hidden></div>
+          </section>
           <div class="admin-metrics"><div class="metric"><span>👥 Participantes</span><strong id="metricGuests">0</strong></div><div class="metric"><span>🎁 Pacotes</span><strong id="metricPackages">0</strong></div><div class="metric"><span>🏆 Arrematados</span><strong id="metricSold">0</strong></div><div class="metric"><span>🔨 Situação</span><strong id="metricStatus">Aguardando</strong></div></div>
           <div class="admin-grid">
             <section class="admin-panel admin-control"><div class="panel-heading"><h2>📺 Leilão ao vivo</h2><span id="adminLiveBadge" class="status-chip">Aguardando</span></div><div class="control-spotlight"><div class="control-gift"><img id="controlGift" src="/assets/mystery-gift.svg" alt=""></div><div><h3 id="controlItemName">Nenhum pacote iniciado</h3><div id="controlCurrentBid" class="control-price">R$ 0,00</div><p id="controlLeader">Aguardando lances</p><div class="control-countdown">⏱️ <strong id="controlTimer">00:00</strong></div></div></div><div class="control-actions"><button class="btn btn-green" id="controlStart" type="button">▶ Iniciar pacote</button><button class="btn btn-blue" id="controlPause" type="button" disabled>⏸ Pausar</button><button class="btn btn-purple" id="controlResume" type="button" disabled>▶ Continuar</button><button class="btn btn-orange" id="controlFinish" type="button" disabled>🏆 Encerrar agora</button></div><p class="control-help">Você escolhe o pacote e inicia a rodada. O telão e os celulares atualizam ao mesmo tempo.</p></section>
             <section class="admin-panel admin-activity"><div class="panel-heading"><h2>⚡ Últimos lances</h2><span>Tempo real</span></div><div id="adminBidHistory" class="bid-history"><p class="muted-text">Os lances aparecerão aqui.</p></div></section>
           </div>
           <section class="admin-panel packages-panel"><div class="panel-heading"><h2>🎀 Pacotes surpresa</h2><button class="btn btn-outline btn-small" id="addPackageBtn2" type="button">＋ Adicionar</button></div><div id="adminPackages" class="package-list"></div></section>
-          <section class="admin-panel participants-panel"><div class="panel-heading"><h2>👥 Convidados e créditos</h2><span id="adminGuestCount">0 convidados</span></div><div class="table-scroll"><table><thead><tr><th>Convidado</th><th>Créditos</th><th>Arremates</th></tr></thead><tbody id="adminGuests"></tbody></table></div></section>
+          <section class="admin-panel participants-panel"><div class="panel-heading"><h2>👥 Convidados e créditos</h2><span id="adminGuestCount">0 convidados</span></div><div class="table-scroll"><table><thead><tr><th>Convidado</th><th>Créditos</th><th>Arremates</th><th>Conta</th></tr></thead><tbody id="adminGuests"></tbody></table></div></section>
           <section class="admin-panel danger-zone"><div><h2>⚠️ Área de testes</h2><p>Apaga todos os cadastros, pacotes e lances. Use somente se quiser recomeçar.</p></div><button id="resetAllBtn" class="btn btn-danger" type="button">Zerar tudo</button></section>
         </div>
       </main>
