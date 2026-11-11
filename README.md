@@ -57,3 +57,18 @@ Node.js 20+, Express, Socket.IO, MongoDB/Mongoose, HTML/CSS/JavaScript responsiv
 `npm install` e depois `npm start` para execução local. Em produção, a porta é definida pelo Render via `PORT`.
 
 **Nota:** o projeto usa exclusivamente créditos de brincadeira, sem depósitos, Pix, saques, compras ou conversão em dinheiro.
+
+## Lance livre (atualização)
+
+Além dos três botões de valores sugeridos, o convidado pode digitar **um lance personalizado em créditos inteiros**, por exemplo 125, 327 ou 600. O servidor aceita qualquer valor inteiro **igual ou maior** que o lance atual + incremento mínimo do pacote (ou lance inicial na primeira oferta), respeitando os créditos do convidado. Os valores sugeridos continuam disponíveis para facilitar o uso no celular.
+
+## Proteção contra múltiplas contas
+
+- Por padrão, há **uma conta por navegador/aparelho**. Um cookie seguro `agnes_device` (HttpOnly, 180 dias) identifica o dispositivo, é vinculado à conta na base de dados e permite reabrir a conta mesmo se o usuário limpar o localStorage.
+- Uma conta já vinculada não consegue se cadastrar novamente no mesmo navegador. O botão **Trocar participante** foi removido.
+- No **Admin → Controle de cadastros**, o organizador pode **fechar ou reabrir novos cadastros** a qualquer momento.
+- Para proteção mais forte, ative **Exigir código individual**: o administrador gera códigos aleatórios `AG-XXXXXXXX`, copia os disponíveis e distribui **um por convidado**. Cada código é **utilizável apenas uma vez**, inclusive se alguém mudar de navegador ou usar uma aba anônima.
+- O painel permite **bloquear/desbloquear convidados**, impedindo lances de contas suspeitas.
+- Códigos e bloqueios persistem no MongoDB Atlas; o comando **Zerar tudo** também limpa os códigos e configurações.
+- **Limitação importante:** navegadores não conseguem identificar fisicamente um celular de forma infalível. Remover cookies, usar aba anônima ou outro navegador pode contornar a restrição simples de aparelho. Os códigos individuais são a proteção recomendada para a festa. Um convidado que obtiver códigos extras de outras pessoas ainda poderá criar contas extras; distribua um código por pessoa e feche cadastros após todos entrarem.
+
