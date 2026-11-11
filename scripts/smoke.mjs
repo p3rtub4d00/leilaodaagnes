@@ -37,7 +37,7 @@ try {
   const alice = await request('/api/guests', { name: 'Alice' });
   assert.equal(alice.response.status, 201);
   assert.equal(alice.json.credits, 1000);
-  await new Promise(resolve => setTimeout(resolve, 5100));
+  await new Promise(resolve => setTimeout(resolve, 240));
   const bob = await request('/api/guests', { name: 'Bob' });
   assert.equal(bob.response.status, 201);
   const aliceHeaders = { 'x-guest-id': alice.json.id, 'x-guest-token': alice.json.token };
@@ -59,6 +59,7 @@ try {
   assert.equal(firstBid.response.status, 200);
   const tooLow = await request('/api/bid', { amount: 50 }, { headers: bobHeaders });
   assert.equal(tooLow.response.status, 400);
+  await new Promise(resolve => setTimeout(resolve, 550));
   const bobBid = await request('/api/bid', { amount: 100 }, { headers: bobHeaders });
   assert.equal(bobBid.response.status, 200);
   const aliceBefore = await request('/api/me', undefined, { headers: aliceHeaders });
