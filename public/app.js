@@ -253,8 +253,8 @@ function renderAdmin() {
   $('adminGuests').innerHTML=state.admin.guests.length ? state.admin.guests.map(g=>'<tr><td>👤 '+safe(g.name)+'</td><td>'+currency(g.credits)+'</td><td>'+(g.wins||[]).length+'</td></tr>').join('') : '<tr><td colspan="3" class="muted-text">Nenhum convidado entrou ainda.</td></tr>';
   $('adminGuestCount').textContent=state.admin.guests.length+' convidados';
 }
-async function adminAction(endpoint, body={}) {
-  try { await api('/admin/'+endpoint,body); toast('Atualização realizada! 🎉'); await Promise.all([refreshAuction(),refreshAdmin(true)]); return true; }
+async function adminAction(endpoint, body={}, options={}) {
+  try { await api('/admin/'+endpoint,body,options); toast('Atualização realizada! 🎉'); await Promise.all([refreshAuction(),refreshAdmin(true)]); return true; }
   catch(e){ toast(e.message,true); return false; }
 }
 function openModal(item=null) {
