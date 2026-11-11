@@ -16,12 +16,14 @@ const PORT = process.env.PORT || 10000;
 const START_CREDITS = 1000;
 const DB_URL = process.env.MONGODB_URI || process.env.MONGO_URI || '';
 let databaseConnected = false;
-const memory = { guests: new Map(), items: new Map(), game: newGame(), sequence: 0 };
+const memory = { guests: new Map(), items: new Map(), passes: new Map(), game: newGame(), sequence: 0 };
 const throttles = new Map();
 
 const guestSchema = new mongoose.Schema({
   name: { type: String, required: true, maxlength: 32 },
   tokenHash: { type: String, required: true },
+  deviceHash: { type: String, unique: true, sparse: true },
+  blocked: { type: Boolean, default: false },
   credits: { type: Number, default: START_CREDITS },
   wins: [{ itemId: String, title: String, amount: Number, at: Date }]
 }, { timestamps: true });
@@ -48,15 +50,23 @@ const gameSchema = new mongoose.Schema({
   endsAt: { type: Date, default: null },
   remainingMs: { type: Number, default: 0 },
   version: { type: Number, default: 0 },
-  history: { type: Array, default: [] }
+  history: { type: Array, default: [] },
+  registrationOpen: { type: Boolean, default: true },
+  inviteOnly: { type: Boolean, default: false }
 }, { minimize: false });
 const Guest = mongoose.model('AuctionGuest', guestSchema);
 const Item = mongoose.model('AuctionItem', itemSchema);
 const Game = mongoose.model('AuctionGame', gameSchema);
+const passSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true },
+  usedBy: { type: String, default: '' },
+  usedAt: { type: Date, default: null }
+}, { timestamps: true });
+const AccessPass = mongoose.model('AuctionAccessPass', passSchema);
 
 function newGame() {
   return { key: 'main', status: 'idle', itemId: '', topAmount: 0, topGuestId: '',
-    topGuestName: '', endsAt: null, remainingMs: 0, version: 0, history: [] };
+    topGuestName: '', endsAt: null, remainingMs: 0, version: 0, history: [], registrationOpen: true, inviteOnly: false };
 }
 function id(v) { return String(v?._id ?? v?.id ?? v ?? ''); }
 function data(v) { return v?.toObject ? v.toObject() : v; }
@@ -64,6 +74,77 @@ function err(res, message, code = 400) { return res.status(code).json({ error: m
 function cleanName(v, max = 36) { return String(v ?? '').replace(/[<>\u0000-\u001f]/g, '').trim().replace(/\s+/g, ' ').slice(0, max); }
 function intIn(v, min, max, fallback) { const n = Number(v); return Number.isInteger(n) && n >= min && n <= max ? n : fallback; }
 function sha(v) { return crypto.createHash('sha256').update(v).digest('hex'); }
+function cookieValue(req, name) {
+  const raw = String(req.headers.cookie || '').split(';').map(x => x.trim())
+    .find(x => x.startsWith(name + '='));
+  return raw ? raw.slice(name.length + 1) : '';
+}
+function ensureDevice(req, res) {
+  let device = cookieValue(req, 'agnes_device');
+  if (!/^[a-f0-9]{64}$/.test(device)) {
+    device = crypto.randomBytes(32).toString('hex');
+    res.cookie('agnes_device', device, {
+      httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production',
+      maxAge: 180 * 86400 * 1000, path: '/'
+    });
+  }
+  return sha(device);
+}
+function deviceFrom(req) {
+  const cookie = cookieValue(req, 'agnes_device');
+  return /^[a-f0-9]{64}$/.test(cookie) ? sha(cookie) : null;
+}
+async function guestByDevice(deviceHash) {
+  if (!deviceHash) return null;
+  if (!databaseConnected) return [...memory.guests.values()].find(g => g.deviceHash === deviceHash) || null;
+  return Guest.findOne({ deviceHash }).lean();
+}
+async function attachDevice(guest, deviceHash) {
+  if (!deviceHash || guest.deviceHash) return;
+  if (await guestByDevice(deviceHash)) return;
+  if (!databaseConnected) { const existing = memory.guests.get(id(guest)); if (existing) existing.deviceHash = deviceHash; return; }
+  try { await Guest.updateOne({ _id: id(guest), deviceHash: { $exists: false } }, { $set: { deviceHash } }); }
+  catch (e) { if (e.code !== 11000) throw e; }
+}
+function makePassCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return 'AG-' + Array.from({ length: 8 }, () => alphabet[crypto.randomInt(alphabet.length)]).join('');
+}
+async function listPasses() {
+  if (!databaseConnected) return [...memory.passes.values()].map(x => ({ ...x }));
+  return AccessPass.find().sort({ createdAt: -1 }).lean();
+}
+async function createPasses(quantity) {
+  const codes = [];
+  for (let i = 0; i < quantity; i++) {
+    for (let retry = 0; retry < 8; retry++) {
+      const code = makePassCode();
+      try {
+        if (!databaseConnected) {
+          if (memory.passes.has(code)) continue;
+          memory.passes.set(code, { code, usedBy: '', usedAt: null, createdAt: new Date() });
+        } else await AccessPass.create({ code });
+        codes.push(code); break;
+      } catch (e) { if (e.code !== 11000) throw e; }
+    }
+  }
+  return codes;
+}
+async function claimPass(code, deviceHash) {
+  if (!databaseConnected) {
+    const pass = memory.passes.get(code);
+    if (!pass || pass.usedBy) return false;
+    pass.usedBy = deviceHash; pass.usedAt = new Date(); return true;
+  }
+  return !!await AccessPass.findOneAndUpdate({ code, usedBy: '' },
+    { $set: { usedBy: deviceHash, usedAt: new Date() } });
+}
+async function releasePass(code, deviceHash) {
+  if (!databaseConnected) {
+    const pass = memory.passes.get(code);
+    if (pass?.usedBy === deviceHash) { pass.usedBy = ''; pass.usedAt = null; }
+  } else await AccessPass.updateOne({ code, usedBy: deviceHash }, { $set: { usedBy: '', usedAt: null } });
+}
 function safeEqual(a, b) {
   const x = Buffer.from(String(a)); const y = Buffer.from(String(b));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
@@ -152,12 +233,12 @@ async function getGuest(guestId) {
   if (!mongoose.isValidObjectId(guestId)) return null;
   return Guest.findById(guestId).lean();
 }
-async function addGuest(name, tokenHash) {
+async function addGuest(name, tokenHash, deviceHash) {
   if (!databaseConnected) {
-    const guest = { _id: crypto.randomUUID(), name, tokenHash, credits: START_CREDITS, wins: [], createdAt: new Date() };
+    const guest = { _id: crypto.randomUUID(), name, tokenHash, deviceHash, blocked: false, credits: START_CREDITS, wins: [], createdAt: new Date() };
     memory.guests.set(id(guest), guest); return guest;
   }
-  return data(await Guest.create({ name, tokenHash, credits: START_CREDITS }));
+  return data(await Guest.create({ name, tokenHash, deviceHash, credits: START_CREDITS }));
 }
 async function chargeWinner(guestId, amount, win) {
   if (!databaseConnected) {
@@ -179,8 +260,8 @@ async function changeBid(game, bid) {
     { $set: bid, $inc: { version: 1 } }, { new: true, lean: true });
 }
 async function clearAll() {
-  if (!databaseConnected) { memory.items.clear(); memory.guests.clear(); memory.game = newGame(); return; }
-  await Promise.all([Guest.deleteMany({}), Item.deleteMany({}), Game.deleteMany({})]);
+  if (!databaseConnected) { memory.items.clear(); memory.guests.clear(); memory.passes.clear(); memory.game = newGame(); return; }
+  await Promise.all([Guest.deleteMany({}), Item.deleteMany({}), Game.deleteMany({}), AccessPass.deleteMany({})]);
   await getGame();
 }
 async function publicState() {
@@ -205,7 +286,8 @@ async function publicState() {
     items: items.map(publicItem),
     ranking, guestCount: guests.length,
     totalSold: items.filter(x => x.status === 'sold').length,
-    temporaryStorage: !databaseConnected, startingCredits: START_CREDITS
+    temporaryStorage: !databaseConnected, startingCredits: START_CREDITS,
+    registration: { open: game.registrationOpen !== false, inviteOnly: !!game.inviteOnly }
   };
 }
 let broadcastPending = false;
@@ -236,31 +318,55 @@ async function finishAuction() {
 }
 const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 app.get('/health', (req, res) => res.json({ ok: true, databaseConnected, realtime: true }));
-app.get('/api/state', asyncRoute(async (req, res) => res.json(await publicState())));
+app.get('/api/state', asyncRoute(async (req, res) => { ensureDevice(req, res); res.json(await publicState()); }));
 app.post('/api/guests', asyncRoute(async (req, res) => {
   const name = cleanName(req.body?.name, 32);
+  const deviceHash = ensureDevice(req, res);
   if (name.length < 2) return err(res, 'Informe seu nome (mínimo 2 letras).');
-  if (slowDown('join:' + req.ip, 200)) return err(res, 'Aguarde alguns segundos antes de entrar novamente.', 429);
-  const token = crypto.randomBytes(32).toString('hex');
-  const guest = await addGuest(name, sha(token));
-  res.status(201).json({ id: id(guest), token, name: guest.name, credits: guest.credits });
+  // A device keeps its account even if the user removes LocalStorage or reloads the page.
+  if (await guestByDevice(deviceHash)) return err(res,
+    'Este aparelho já tem uma conta. Entre com a conta que foi cadastrada aqui.', 409);
+  const game = await getGame();
+  if (game.registrationOpen === false) return err(res, 'Novos cadastros estão encerrados pelo organizador.', 403);
+  if (slowDown('join:' + deviceHash, 800)) return err(res, 'Aguarde um instante antes de tentar novamente.', 429);
+  const code = String(req.body?.accessCode || '').trim().toUpperCase();
+  let claimed = false;
+  if (game.inviteOnly) {
+    if (!/^AG-[A-HJ-NP-Z2-9]{8}$/.test(code))
+      return err(res, 'Informe o código individual fornecido pelo organizador.', 403);
+    if (slowDown('code:' + deviceHash, 900)) return err(res, 'Aguarde antes de tentar outro código.', 429);
+    claimed = await claimPass(code, deviceHash);
+    if (!claimed) return err(res, 'Código inválido ou já utilizado.', 403);
+  }
+  let guest;
+  try { guest = await addGuest(name, sha(crypto.randomBytes(32).toString('hex')), deviceHash); }
+  catch (e) {
+    if (claimed) await releasePass(code, deviceHash);
+    if (e.code === 11000) return err(res, 'Este aparelho já possui um cadastro.', 409);
+    throw e;
+  }
+  res.status(201).json({ id: id(guest), name: guest.name, credits: guest.credits });
   await broadcast();
 }));
 async function guestFrom(req) {
   const guestId = String(req.headers['x-guest-id'] || '');
   const token = String(req.headers['x-guest-token'] || '');
-  if (!guestId || !token || token.length > 128) return null;
-  const guest = await getGuest(guestId);
-  return guest && safeEqual(guest.tokenHash, sha(token)) ? guest : null;
+  if (guestId && token && token.length <= 128) {
+    const guest = await getGuest(guestId);
+    if (guest && safeEqual(guest.tokenHash, sha(token))) return guest;
+  }
+  return guestByDevice(deviceFrom(req));
 }
 app.get('/api/me', asyncRoute(async (req, res) => {
   const g = await guestFrom(req);
   if (!g) return err(res, 'Cadastro não encontrado neste aparelho.', 401);
-  res.json({ id: id(g), name: g.name, credits: g.credits, wins: g.wins || [] });
+  await attachDevice(g, deviceFrom(req));
+  res.json({ id: id(g), name: g.name, credits: g.credits, wins: g.wins || [], blocked: !!g.blocked });
 }));
 app.post('/api/bid', asyncRoute(async (req, res) => {
   const guest = await guestFrom(req);
   if (!guest) return err(res, 'Entre com seu nome para dar lances.', 401);
+  if (guest.blocked) return err(res, 'Sua conta foi bloqueada pelo organizador.', 403);
   if (slowDown('bid:' + id(guest), 450)) return err(res, 'Aguarde um instante entre os lances.', 429);
   const game = await getGame();
   if (game.status !== 'live' || Date.now() >= new Date(game.endsAt).getTime()) return err(res, 'Este leilão não está recebendo lances.');
@@ -269,8 +375,8 @@ app.post('/api/bid', asyncRoute(async (req, res) => {
   if (game.topGuestId === id(guest)) return err(res, 'Você já está liderando este leilão!');
   const amount = Number(req.body?.amount);
   const minimum = game.topAmount > 0 ? game.topAmount + item.increment : item.startingBid;
-  if (!Number.isInteger(amount) || amount < minimum || (amount - minimum) % item.increment !== 0)
-    return err(res, 'O lance deve respeitar o valor mínimo e os incrementos.');
+  if (!Number.isInteger(amount) || amount < minimum)
+    return err(res, 'O lance livre deve ser um número inteiro a partir de ' + minimum + ' créditos.');
   if (amount > guest.credits) return err(res, 'Você não tem créditos suficientes para esse lance.');
   if (amount > 1000000) return err(res, 'Lance acima do limite.');
   const currentTime = Date.now();
@@ -297,10 +403,44 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 app.get('/api/admin/data', requireAdmin, asyncRoute(async (req, res) => {
-  const [items, guests, game] = await Promise.all([getItems(), allGuests(), getGame()]);
-  res.json({ items: items.map(x => ({ ...data(x), id: id(x) })),
-    guests: guests.map(g => ({ id: id(g), name: g.name, credits: g.credits, wins: g.wins || [], createdAt: g.createdAt })),
+  const [items, guests, game, passes] = await Promise.all([getItems(), allGuests(), getGame(), listPasses()]);
+  res.json({ passes: passes.map(p => ({ code: p.code, used: !!p.usedBy })),
+    registration: { open: game.registrationOpen !== false, inviteOnly: !!game.inviteOnly }, items: items.map(x => ({ ...data(x), id: id(x) })),
+    guests: guests.map(g => ({ id: id(g), name: g.name, credits: g.credits, blocked: !!g.blocked, wins: g.wins || [], createdAt: g.createdAt })),
     game, temporaryStorage: !databaseConnected });
+}));
+app.post('/api/admin/registration', requireAdmin, asyncRoute(async (req, res) => {
+  if (typeof req.body?.open !== 'boolean' || typeof req.body?.inviteOnly !== 'boolean')
+    return err(res, 'Configurações inválidas.');
+  const game = await getGame();
+  const updated = await saveGame({
+    registrationOpen: req.body.open, inviteOnly: req.body.inviteOnly
+  }, { version: game.version });
+  if (!updated) return err(res, 'O leilão foi atualizado. Tente novamente.', 409);
+  res.json({ ok: true, registration: { open: updated.registrationOpen !== false, inviteOnly: !!updated.inviteOnly } });
+  await broadcast();
+}));
+app.post('/api/admin/passes', requireAdmin, asyncRoute(async (req, res) => {
+  const count = Number(req.body?.count);
+  if (!Number.isInteger(count) || count < 1 || count > 100) return err(res, 'Gere de 1 a 100 códigos por vez.');
+  const existing = await listPasses();
+  if (existing.length + count > 1000) return err(res, 'Limite de 1.000 códigos de acesso.');
+  const codes = await createPasses(count);
+  res.json({ ok: true, codes });
+}));
+app.post('/api/admin/guests/:guestId/block', requireAdmin, asyncRoute(async (req, res) => {
+  if (typeof req.body?.blocked !== 'boolean') return err(res, 'Informe se a conta deve ser bloqueada.');
+  if (!databaseConnected) {
+    const guest = memory.guests.get(req.params.guestId);
+    if (!guest) return err(res, 'Convidado não encontrado.', 404);
+    guest.blocked = req.body.blocked;
+  } else {
+    if (!mongoose.isValidObjectId(req.params.guestId)) return err(res, 'Convidado não encontrado.', 404);
+    const guest = await Guest.findByIdAndUpdate(req.params.guestId,
+      { $set: { blocked: req.body.blocked } }, { new: true });
+    if (!guest) return err(res, 'Convidado não encontrado.', 404);
+  }
+  res.json({ ok: true }); await broadcast();
 }));
 function parseItem(body) {
   const name = cleanName(body?.name, 60);
@@ -406,6 +546,7 @@ async function start() {
   if (DB_URL) {
     try {
       await mongoose.connect(DB_URL, { serverSelectionTimeoutMS: 12000 });
+      await Promise.all([Guest.init(), AccessPass.init()]);
       databaseConnected = true;
       console.log('MongoDB conectado. Persistência habilitada.');
       await getGame();
