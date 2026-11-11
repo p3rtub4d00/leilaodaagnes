@@ -72,11 +72,11 @@ function onTick(ms) {
     const g = state.auction.game;
     const round = g.itemId + ':' + g.topGuestId + ':' + g.topAmount;
     if (round !== state.narratedRound) { state.narratedRound = round; state.saidOne = false; state.saidTwo = false; }
-    if (ms > 0 && ms <= 11500 && !state.saidOne) {
+    if (ms > 0 && ms <= 6700 && !state.saidOne) {
       state.saidOne = true;
       announce('Dou-lhe uma! ' + spokenMoney(g.topAmount) + ' para ' + g.topGuestName + '!');
     }
-    if (ms > 0 && ms <= 5600 && !state.saidTwo) {
+    if (ms > 0 && ms <= 2600 && !state.saidTwo) {
       state.saidTwo = true;
       announce('Dou-lhe duas! Última chance! ' + spokenMoney(g.topAmount) + '!');
     }
