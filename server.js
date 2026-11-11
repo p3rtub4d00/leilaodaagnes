@@ -240,7 +240,7 @@ app.get('/api/state', asyncRoute(async (req, res) => res.json(await publicState(
 app.post('/api/guests', asyncRoute(async (req, res) => {
   const name = cleanName(req.body?.name, 32);
   if (name.length < 2) return err(res, 'Informe seu nome (mínimo 2 letras).');
-  if (slowDown('join:' + req.ip, 5000)) return err(res, 'Aguarde alguns segundos antes de entrar novamente.', 429);
+  if (slowDown('join:' + req.ip, 200)) return err(res, 'Aguarde alguns segundos antes de entrar novamente.', 429);
   const token = crypto.randomBytes(32).toString('hex');
   const guest = await addGuest(name, sha(token));
   res.status(201).json({ id: id(guest), token, name: guest.name, credits: guest.credits });
