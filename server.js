@@ -9,7 +9,7 @@ const { Server } = require('socket.io');
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1.4mb' }));
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: '2h' }));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: true }));
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, { cors: { origin: false } });
 const PORT = process.env.PORT || 10000;
