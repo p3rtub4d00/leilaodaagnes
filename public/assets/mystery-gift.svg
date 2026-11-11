@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 510" role="img" aria-label="Presente misterioso com laço dourado">
+<defs>
+ <linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff8bea"/><stop offset=".42" stop-color="#e922b4"/><stop offset="1" stop-color="#980066"/></linearGradient>
+ <linearGradient id="side" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a8007e"/><stop offset="1" stop-color="#660158"/></linearGradient>
+ <linearGradient id="top" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#ffd8f4"/><stop offset=".6" stop-color="#fb55bd"/><stop offset="1" stop-color="#c7149c"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff8ae"/><stop offset=".22" stop-color="#ffdd26"/><stop offset=".46" stop-color="#e78e00"/><stop offset=".69" stop-color="#ffed58"/><stop offset="1" stop-color="#bc6000"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#fff9cb" stop-opacity=".75"/><stop offset="1" stop-color="#fff5cf" stop-opacity="0"/></radialGradient>
+ <filter id="drop" x="-30%" y="-30%" width="160%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="10"/><feOffset dy="12"/><feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="shine"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<ellipse cx="222" cy="250" rx="225" ry="246" fill="url(#glow)"/>
+<g filter="url(#drop)" stroke-linejoin="round">
+ <path d="M65 181 220 142 388 181 233 223Z" fill="url(#top)" stroke="#770044" stroke-width="9"/>
+ <path d="M62 202 230 240 231 467 68 422Q55 417 55 404V211Z" fill="url(#b)" stroke="#780047" stroke-width="10"/>
+ <path d="M230 240 395 198V398Q394 411 378 421L231 467Z" fill="url(#side)" stroke="#720047" stroke-width="10"/>
+ <path d="M59 188 228 220 395 181 400 237 230 277 60 238Z" fill="url(#top)" stroke="#750043" stroke-width="10"/>
+ <path d="M160 204 203 214 205 448 158 435Z" fill="url(#gold)" stroke="#a44c00" stroke-width="4"/>
+ <path d="M269 211 309 201 311 447 266 461Z" fill="url(#gold)" stroke="#b86b04" stroke-width="4"/>
+ <path d="M153 170 204 156 342 189 302 201Z" fill="url(#gold)" stroke="#aa5b00" stroke-width="4"/>
+ <path d="M164 248 199 255 200 287 164 279Z" fill="#fffabe" opacity=".34"/>
+ <path d="M100 298q17-27 34-5 11 13-5 31l-7 8m-4 23h1" fill="none" stroke="#fff5fc" stroke-width="12" stroke-linecap="round"/>
+ <path d="M319 318q18-35 39-15 14 17-8 37l-10 12m-4 23h1" fill="none" stroke="#ffc9ee" stroke-width="13" stroke-linecap="round"/>
+ <path d="M95 369q14-19 28-1 10 12-5 24l-5 7m-3 15h1" fill="none" stroke="#fff0fb" stroke-width="8" stroke-linecap="round" opacity=".75"/>
+ <path d="M233 133c-63-67-101-88-133-74-25 12-18 43 0 62 23 24 73 37 133 30-55-43-77-61-99-61 8 21 48 34 99 46Z" fill="url(#gold)" stroke="#a45200" stroke-width="8"/>
+ <path d="M232 129c53-72 95-100 124-82 24 13 24 47 0 69-26 25-73 34-124 35 52-35 81-60 102-68-11 30-39 46-102 54Z" fill="url(#gold)" stroke="#a45200" stroke-width="8"/>
+ <path d="M199 132q-21-29-31-30-9 27 27 51l27 4m39-29q21-25 31-25 6 28-29 50l-20 4" fill="#e68700" stroke="#995200" stroke-width="5"/>
+ <path d="M201 129q25-16 54-3 15 13 10 32-22 25-55 13-20-11-9-42Z" fill="url(#gold)" stroke="#9f5300" stroke-width="7"/>
+ <path d="M210 136q12-9 26-6" stroke="#fff9c0" stroke-width="7" stroke-linecap="round" opacity=".9"/>
+</g>
+<g fill="#fff6ae"><path d="m63 95 6 19 19 6-19 7-6 19-7-19-19-7 19-6z"/><path d="m387 111 5 16 17 5-17 6-5 16-5-16-16-6 16-5z"/><path d="m380 448 5 13 13 5-13 5-5 13-6-13-13-5 13-5z"/></g>
+</svg>
