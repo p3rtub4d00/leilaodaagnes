@@ -5,7 +5,7 @@ const view = location.pathname.startsWith('/admin') ? 'admin' : location.pathnam
 const currency = n => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock = ms => { const sec = Math.max(0, Math.ceil(Number(ms || 0) / 1000)); return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); };
-const state = { auction: null, me: null, guest: null, admin: null, selected: null, photo: '', editItem: null, previousBid: null, previousStatus: null, sound: false, soundContext: null, narratedRound: '', saidOne: false, saidTwo: false, lastAdminRefresh: 0, lastMeRefresh: 0 };
+const state = { auction: null, me: null, guest: null, admin: null, selected: null, freeBidValue: '', photo: '', editItem: null, previousBid: null, previousStatus: null, sound: false, soundContext: null, narratedRound: '', saidOne: false, saidTwo: false, lastAdminRefresh: 0, lastMeRefresh: 0 };
 try { state.guest = JSON.parse(localStorage.getItem('agnes_auction_guest') || 'null'); } catch { localStorage.removeItem('agnes_auction_guest'); }
 const imageOf = item => item?.image || '/assets/mystery-gift.svg';
 const statusName = status => ({ idle: 'Aguardando', live: 'Ao vivo', paused: 'Pausado', settling: 'Finalizando', sold: 'Encerrado' })[status] || 'Aguardando';
@@ -45,7 +45,7 @@ function applyAuction(value) {
         announce(value.game.topGuestName + ' deu um lance de ' + spokenMoney(value.game.topAmount) + '! Quem vai dar mais?');
       }
     }
-    if (view === 'guest' && state.selected !== null) state.selected = null;
+    if (view === 'guest' && state.selected !== null) { state.selected = null; state.freeBidValue = ''; }
   }
   if (newWinner && view === 'tv' && state.sound) {
     ding(4);
@@ -86,6 +86,11 @@ function renderGuest() {
   const joined = !!state.me;
   $('guestJoin').hidden = joined;
   $('guestDashboard').hidden = !joined;
+  const rules = state.auction?.registration || { open: true, inviteOnly: false };
+  $('guestInviteGroup').hidden = !rules.inviteOnly;
+  $('guestAccessCode').required = !!rules.inviteOnly;
+  $('registrationClosedNotice').hidden = rules.open !== false;
+  $('joinForm').querySelector('button[type="submit"]').disabled = rules.open === false;
   if (!joined) return;
   const a = state.auction || {};
   const game = a.game || {};
@@ -114,11 +119,20 @@ function renderGuest() {
   if (live) {
     const min = bidMinimum(game, item);
     const amounts = [min, min + item.increment, min + item.increment * 2];
-    if (!amounts.includes(state.selected) || state.selected > state.me.credits) state.selected = amounts.find(v => v <= state.me.credits) || null;
-    $('bidOptions').innerHTML = amounts.map(amount => '<button type="button" class="bid-choice' + (state.selected === amount ? ' selected' : '') + '" data-amount="' + amount + '"' + (amount > state.me.credits ? ' disabled title="Créditos insuficientes"' : '') + '>' + currency(amount).replace(',00', '').replace('R$ ', 'R$ ') + '</button>').join('');
-    $('placeBidBtn').disabled = state.selected === null || game.topGuestId === state.me.id;
-    $('placeBidBtn').textContent = game.topGuestId === state.me.id ? '👑 VOCÊ ESTÁ GANHANDO!' : '🔨 DAR LANCE';
-    $('bidNote').textContent = game.topGuestId === state.me.id ? 'Seu lance está liderando. Aguarde o final!' : 'Seu saldo só diminui se você arrematar o pacote.';
+    const free = $('guestFreeBid');
+    free.min = String(min);
+    free.max = String(state.me.credits);
+    if (free.value !== state.freeBidValue) free.value = state.freeBidValue;
+    $('freeBidHelp').textContent = 'Lance mínimo: ' + currency(min) + ' · Seu saldo: ' + currency(state.me.credits) + '. Pode digitar qualquer valor inteiro a partir do mínimo.';
+    const typed = state.freeBidValue.trim() !== '';
+    if (typed) {
+      const amount = Number(state.freeBidValue);
+      state.selected = Number.isInteger(amount) && amount >= min && amount <= state.me.credits ? amount : null;
+    } else if (!amounts.includes(state.selected) || state.selected > state.me.credits) {
+      state.selected = amounts.find(v => v <= state.me.credits) || null;
+    }
+    $('bidOptions').innerHTML = amounts.map(amount => '<button type="button" class="bid-choice' + (!typed && state.selected === amount ? ' selected' : '') + '" data-amount="' + amount + '"' + (amount > state.me.credits ? ' disabled title="Créditos insuficientes"' : '') + '>' + currency(amount).replace(',00', '') + '</button>').join('');
+    updateBidButton();
   }
   $('myWinCount').textContent = (state.me.wins || []).length + ' pacote(s)';
   $('myWins').innerHTML = (state.me.wins || []).length
@@ -128,8 +142,25 @@ function renderGuest() {
     ? a.ranking.slice(0,5).map((g,i) => '<div class="mini-rank-row"><span>' + ['🥇','🥈','🥉','🌟','⭐'][i] + ' ' + safe(g.name) + '</span><b>' + g.wins + ' 🎁</b></div>').join('')
     : '<span class="muted-text">O placar aparece quando os convidados participarem.</span>';
 }
+function updateBidButton() {
+  const a = state.auction, game = a?.game, item = a?.active;
+  if (!game || !item || !state.me) return;
+  const min = bidMinimum(game, item);
+  if (state.freeBidValue.trim() !== '') {
+    const num = Number(state.freeBidValue);
+    state.selected = Number.isInteger(num) && num >= min && num <= state.me.credits ? num : null;
+  }
+  const leader = game.topGuestId === state.me.id;
+  $('placeBidBtn').disabled = state.selected === null || leader;
+  $('placeBidBtn').textContent = leader ? '👑 VOCÊ ESTÁ GANHANDO!' : '🔨 DAR LANCE';
+  $('bidNote').textContent = leader ? 'Seu lance está liderando. Aguarde o final!' :
+    state.freeBidValue.trim() && state.selected === null ? 'Digite um lance inteiro entre ' + currency(min) + ' e ' + currency(state.me.credits) + '.' :
+    'Seu saldo só diminui se você arrematar o pacote.';
+  document.querySelectorAll('#bidOptions .bid-choice').forEach(button => {
+    button.classList.toggle('selected', !state.freeBidValue.trim() && Number(button.dataset.amount) === state.selected);
+  });
+}
 async function refreshMe(showError = true) {
-  if (!state.guest) { state.me = null; if (view === 'guest') renderGuest(); return; }
   try { state.me = await api('/me'); state.lastMeRefresh = Date.now(); if (view === 'guest') renderGuest(); }
   catch (e) {
     if (e.code === 401) { state.guest = null; state.me = null; localStorage.removeItem('agnes_auction_guest'); if (view === 'guest') renderGuest(); }
@@ -144,23 +175,28 @@ function initGuest() {
     const btn = event.submitter || $('joinForm').querySelector('button');
     btn.disabled = true;
     try {
-      const g = await api('/guests', { name });
-      state.guest = { id:g.id, token:g.token };
-      localStorage.setItem('agnes_auction_guest', JSON.stringify(state.guest));
+      const g = await api('/guests', { name, accessCode: $('guestAccessCode').value.trim().toUpperCase() });
+      state.guest = null;
+      localStorage.removeItem('agnes_auction_guest');
       await refreshMe();
       toast('Bem-vindo(a), ' + g.name + '! Você ganhou 1.000 créditos fictícios! 🎉');
-    } catch (e) { toast(e.message, true); }
+    } catch (e) { toast(e.message, true); if (e.code === 409) refreshMe(false); }
     finally { btn.disabled = false; }
-  });
-  $('switchGuestBtn').addEventListener('click', () => {
-    if (!confirm('Trocar de participante neste aparelho? Sua conta anterior continua com os créditos que tinha.')) return;
-    localStorage.removeItem('agnes_auction_guest'); state.guest = null; state.me = null; state.selected = null; renderGuest();
   });
   $('bidOptions').addEventListener('click', event => {
     const btn = event.target.closest('[data-amount]');
     if (!btn) return;
+    state.freeBidValue = '';
+    $('guestFreeBid').value = '';
     state.selected = Number(btn.dataset.amount);
     renderGuest();
+  });
+  $('guestFreeBid').addEventListener('input', event => {
+    state.freeBidValue = event.target.value;
+    updateBidButton();
+  });
+  $('guestFreeBid').addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); $('placeBidBtn').click(); }
   });
   $('placeBidBtn').addEventListener('click', async () => {
     if (state.selected === null) return;
@@ -169,14 +205,14 @@ function initGuest() {
     try {
       await api('/bid', { amount });
       toast('Seu lance de ' + currency(amount) + ' foi registrado! 🔨');
-      state.selected = null;
+      state.selected = null; state.freeBidValue = ''; $('guestFreeBid').value = '';
       await refreshAuction();
     } catch (e) {
       toast(e.message, true);
       await refreshAuction();
     } finally { btn.disabled = false; renderGuest(); }
   });
-  refreshMe(false); refreshAuction();
+  refreshAuction().then(() => refreshMe(false));
 }
 function ding(count) {
   try {
@@ -309,8 +345,17 @@ function renderAdmin() {
     const itemId=item.id || item._id, isActive=game.itemId===itemId && active, sold=item.status==='sold';
     return '<div class="package-tile"><div class="package-art"><img src="'+safe(imageOf(item))+'" alt=""></div><div class="package-desc"><h3>'+safe(item.name)+'</h3><p>'+safe(item.hint)+'</p><small>Início: '+currency(item.startingBid)+' · +' +currency(item.increment)+' · '+item.duration+'s</small>'+(item.secret?'<div class="package-secret">🤫 Segredo: '+safe(item.secret)+'</div>':'')+(sold?'<div class="package-secret">🏆 '+safe(item.winner?.name||'Arrematado')+' · '+currency(item.winner?.amount||0)+'</div>':'')+'<div class="package-actions"><button type="button" data-action="start" data-id="'+safe(itemId)+'" class="start-tile" '+(sold||active?'disabled':'')+'>▶ Leiloar</button><button type="button" data-action="edit" data-id="'+safe(itemId)+'" '+(isActive?'disabled':'')+'>✏️ Editar</button><button type="button" data-action="delete" data-id="'+safe(itemId)+'" '+(isActive?'disabled':'')+'>🗑️ Excluir</button></div></div></div>';
   }).join('') : '<div class="empty-state"><span class="emoji">🎁</span>Cadastre o primeiro pacote surpresa para começar!</div>';
-  $('adminGuests').innerHTML=state.admin.guests.length ? state.admin.guests.map(g=>'<tr><td>👤 '+safe(g.name)+'</td><td>'+currency(g.credits)+'</td><td>'+(g.wins||[]).length+'</td></tr>').join('') : '<tr><td colspan="3" class="muted-text">Nenhum convidado entrou ainda.</td></tr>';
+  $('adminGuests').innerHTML=state.admin.guests.length ? state.admin.guests.map(g=>'<tr><td>👤 '+safe(g.name)+'</td><td>'+currency(g.credits)+'</td><td>'+(g.wins||[]).length+'</td><td><button type="button" class="guest-block-btn" data-guest-id="'+safe(g.id)+'" data-blocked="'+!!g.blocked+'">'+(g.blocked?'✅ Desbloquear':'🚫 Bloquear')+'</button></td></tr>').join('') : '<tr><td colspan="4" class="muted-text">Nenhum convidado entrou ainda.</td></tr>';
   $('adminGuestCount').textContent=state.admin.guests.length+' convidados';
+  const reg=state.admin.registration||{open:true,inviteOnly:false};
+  $('adminRegistrationOpen').checked=reg.open;
+  $('adminInviteOnly').checked=reg.inviteOnly;
+  const passes=state.admin.passes||[];
+  const free=passes.filter(p=>!p.used);
+  $('adminCodesSummary').textContent=passes.length+' códigos gerados · '+free.length+' disponíveis · '+(passes.length-free.length)+' utilizados';
+  $('adminCodesList').hidden=!passes.length;
+  $('adminCodesList').innerHTML=passes.map(p=>'<span class="access-pass '+(p.used?'used':'')+'">'+safe(p.code)+(p.used?' ✓ utilizado':' · disponível')+'</span>').join('');
+
 }
 async function adminAction(endpoint, body={}, options={}) {
   try { await api('/admin/'+endpoint,body,options); toast('Atualização realizada! 🎉'); await Promise.all([refreshAuction(),refreshAdmin(true)]); return true; }
@@ -364,6 +409,29 @@ function initAdmin() {
   $('controlPause').addEventListener('click',()=>adminAction('pause'));
   $('controlResume').addEventListener('click',()=>adminAction('resume'));
   $('controlFinish').addEventListener('click',()=>{if(confirm('Encerrar agora e entregar o pacote ao maior lance?'))adminAction('finish');});
+  $('saveRegistrationBtn').addEventListener('click', () => adminAction('registration', {
+    open: $('adminRegistrationOpen').checked, inviteOnly: $('adminInviteOnly').checked
+  }));
+  $('generateCodesBtn').addEventListener('click', async () => {
+    const count=Number($('adminCodeCount').value);
+    try {
+      await api('/admin/passes', {count});
+      toast(count+' códigos individuais gerados! 🔐');
+      await refreshAdmin();
+    } catch(e) { toast(e.message,true); }
+  });
+  $('copyCodesBtn').addEventListener('click', async () => {
+    const codes=(state.admin?.passes||[]).filter(p=>!p.used).map(p=>p.code);
+    if(!codes.length)return toast('Não há códigos disponíveis para copiar.',true);
+    try { await navigator.clipboard.writeText(codes.join('\n')); toast(codes.length+' códigos copiados!'); }
+    catch(e){ toast('Não foi possível copiar automaticamente. Selecione os códigos na lista.',true); }
+  });
+  $('adminGuests').addEventListener('click', async event => {
+    const btn=event.target.closest('[data-guest-id]');if(!btn)return;
+    const blocked=btn.dataset.blocked==='true';
+    if(!confirm((blocked?'Desbloquear':'Bloquear')+' este convidado?'))return;
+    await adminAction('guests/'+btn.dataset.guestId+'/block',{blocked:!blocked});
+  });
   $('addPackageBtn').addEventListener('click',()=>openModal());
   $('addPackageBtn2').addEventListener('click',()=>openModal());
   $('adminPackages').addEventListener('click',async event=>{
@@ -404,11 +472,11 @@ if(window.io){
   const socket=window.io({transports:['websocket','polling'],reconnection:true});
   socket.on('auction:state',applyAuction);
   socket.on('auction:tick',t=>onTick(t.remainingMs));
-  socket.on('connect',()=>{refreshAuction();if(view==='guest'&&state.guest)refreshMe(false);});
+  socket.on('connect',()=>{refreshAuction();if(view==='guest')refreshMe(false);});
 }
 setInterval(()=>{
   if(state.auction?.game?.status==='live')onTick(remaining());
-  if(state.guest&&view==='guest'&&Date.now()-state.lastMeRefresh>12000)refreshMe(false);
+  if(view==='guest'&&Date.now()-state.lastMeRefresh>12000)refreshMe(false);
   if(view==='admin'&&state.admin&&Date.now()-state.lastAdminRefresh>12000)refreshAdmin(false);
 },1000);
 setInterval(refreshAuction,15000);
