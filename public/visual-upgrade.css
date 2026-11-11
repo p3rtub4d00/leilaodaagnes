@@ -1,0 +1,142 @@
+/* Identidade visual 2 — Leilão Surpresa da Agnes.
+   Tipografia baseada na referência aprovada: redonda, preenchimento sólido,
+   contornos atrás das letras (paint-order), brilho dourado e botões extrudados.
+   Ilustrações vetoriais de alta resolução, nunca esticadas de thumbnails. */
+:root {--purple:#65009d;--deep:#350052;--magenta:#ee029b;--light:#fceaff;--gold:#ffd325}
+body {font-family:'Fredoka',system-ui,sans-serif}
+.btn,button,h1,h2,h3,.metric strong,.item-number,.hello-label,.credit-pill {font-family:'Fredoka',system-ui,sans-serif;letter-spacing:0}
+h1,h2,h3 {font-weight:700}
+.guest-view{
+ background:radial-gradient(ellipse 60% 34% at 50% 0%,#fcbaff 0%,#d85bea 47%,transparent 100%),
+ repeating-conic-gradient(from -10deg at 50% 4%,#ffcbf733 0deg 11deg,transparent 11deg 22deg),
+ linear-gradient(180deg,#a529e9 0%,#ca5fe3 28%,#f7c7fc 77%,#f4d8ff 100%);
+}
+.guest-view:before{background:linear-gradient(180deg,transparent 0%,#ffe7ff13 40%,#f8e7ff 100%);}
+.guest-container {max-width:465px}
+.guest-header {height:235px;padding:18px 0 0;overflow:visible;align-items:flex-start}
+.guest-header-copy {width:66%;margin:0;filter:drop-shadow(0 2px 2px #3c0055b0);z-index:2}
+.gavel-icon{top:21px;left:3px;font-size:31px;transform:rotate(-25deg);filter:drop-shadow(1px 3px 0 #3f064a)}
+.brand-words,.tv-brand {
+ font-family:'Lilita One','Baloo 2','Fredoka',sans-serif;
+ letter-spacing:-.012em;line-height:.91;
+ transform:rotate(-4deg);filter:drop-shadow(0 5px 0 #500456);
+}
+.brand-words{padding:14px 0 0 39px;align-items:flex-start}
+.brand-words span,.tv-brand span{
+ font-family:inherit;font-weight:400;color:#fff;
+ -webkit-text-stroke:4px #40104c;paint-order:stroke fill;
+ text-shadow:1px 4px 0 #30004a;
+ font-size:42px;letter-spacing:0;
+}
+.brand-words strong,.tv-brand strong{
+ font-family:inherit;font-weight:400;color:#ffdf28;
+ -webkit-text-stroke:5px #4a093c;paint-order:stroke fill;
+ text-shadow:2px 3px 0 #f47b04,3px 6px 0 #470039;
+ font-size:57px;letter-spacing:-1.2px;margin-left:0;
+}
+.brand-words em,.tv-brand em {
+ font-family:inherit;font-style:normal;font-weight:400;
+ color:#ff9dd9;-webkit-text-stroke:3px #45054f;paint-order:stroke fill;
+ text-shadow:2px 4px 0 #54005e;
+ font-size:31px;align-self:flex-end;margin-right:7px;
+}
+.headline-kicker {color:#fff;font-family:'Fredoka',sans-serif;font-size:13px;font-weight:700;
+ background:#6500937a;border:1px solid #ffaeed77;border-radius:40px;padding:5px 12px;
+ text-shadow:none;display:inline-block;margin:15px 0 0 10px;line-height:1.25}
+.brand-mascot {object-fit:contain;image-rendering:auto;
+ width:225px;height:245px;right:-35px;top:0;filter:drop-shadow(0 13px 4px #65008652);z-index:1}
+.paper-card{background:linear-gradient(145deg,#ffffff,#fff6ff);border:2px solid #fff;
+ box-shadow:0 5px 0 #9b4dc08a,0 14px 35px #47006635}
+.join-card{padding:25px 23px 27px}
+.join-card h1{font-family:'Lilita One',sans-serif;font-weight:400;color:#6f0e9e;font-size:30px;line-height:1.12}
+.join-card p{color:#5b366e;font-size:16px}
+.join-card form label{font-size:14px}
+.join-card input,.admin-login input,.package-form input,.package-form select{border-color:#dfb5ef}
+.join-card input:focus,.admin-login input:focus,.package-form input:focus{border-color:#a025d0}
+.btn-large {font-family:'Lilita One','Fredoka',sans-serif;font-weight:400;letter-spacing:.02em;text-shadow:0 2px 0 #4c005c}
+.btn{font-family:'Fredoka',system-ui,sans-serif;font-weight:700}
+.btn-large{font-family:'Lilita One',sans-serif}
+.btn-pink{background:linear-gradient(180deg,#ff78d3 0%,#ff169e 43%,#d80089 100%);border:2px solid #ff9de4;box-shadow:0 5px 0 #990079,0 9px 19px #9400803a}
+.btn-purple{background:linear-gradient(180deg,#a83af1,#8100d0 55%,#59009d);border:2px solid #d780ff;box-shadow:0 5px 0 #420073,0 10px 18px #5900883b}
+.balance-card{border:2px solid #fff;padding-top:19px;background:#fff9ff;box-shadow:0 5px 0 #bb6cd575,0 14px 30px #5a008344}
+.hello-label{font-family:'Lilita One','Fredoka',sans-serif;font-size:29px;font-weight:400;color:#330651}
+.balance-label{font-size:14px;color:#3c1950}
+.credit-pill{font-family:'Lilita One',sans-serif;font-weight:400;font-size:31px;background:linear-gradient(105deg,#8a00d1 0%,#650092 65%,#4d006f);text-shadow:0 3px 0 #71004d}
+.item-card{margin-top:20px}
+.item-number{font-family:'Lilita One',sans-serif;font-weight:400;font-size:21px}
+.guest-price-area>strong{font-family:'Lilita One',sans-serif;color:#ed048c;font-weight:400;text-shadow:1px 3px #ffd0ef}
+.guest-price-area>span{color:#4c1568}
+.leader-line{background:#61008f;color:white;border:1px solid #c86aed;box-shadow:0 3px 0 #390054}
+.gift-thumb,.package-art,.control-gift {background:radial-gradient(circle at center,#ffe8ff 0%,#f884e5 42%,#b223d9 100%);border:2px solid #efc1ff}
+.gift-thumb img,.package-art img,.control-gift img{object-fit:contain}
+.round-pill{background:linear-gradient(90deg,#a926db,#eb4dc5);color:white}
+.bid-choice{font-family:'Lilita One',sans-serif;font-weight:400;border:2px solid #ff91d1;background:linear-gradient(#ff67ce,#ef019e);box-shadow:0 4px 0 #b10076}
+.bid-choice.selected{background:linear-gradient(#fff180,#ffbd15);box-shadow:0 3px 0 #9f6c00}
+.section-title h2,.panel-heading h2{font-family:'Lilita One',sans-serif;font-weight:400}
+.tv-view{background:radial-gradient(ellipse 57% 85% at 55% 51%,#ff9bf0 0%,#d33ced 40%,#8a0acb 70%,#52007d 100%)}
+.tv-view:before{background:repeating-conic-gradient(from 14deg at 50% 50%,#fff4ff22 0deg 10deg,transparent 10deg 20deg);opacity:.8}
+.tv-brand{line-height:.83;filter:drop-shadow(0 .55vh 0 #360035)}
+.tv-brand span{font-size:clamp(26px,3.8vw,67px);-webkit-text-stroke:5px #31023b}
+.tv-brand strong{font-size:clamp(45px,6.45vw,112px);-webkit-text-stroke:6px #3e003a;text-shadow:.16vw .3vw 0 #f57c00,.25vw .45vw 0 #460039}
+.tv-brand em{font-size:clamp(26px,3.1vw,57px);-webkit-text-stroke:4px #53004d}
+.tv-gavel{filter:drop-shadow(3px 5px 0 #540056)}
+.tv-item-title{background:linear-gradient(165deg,#fff2a2,#ffc526);color:#30134f;border:3px solid #fff1b2;box-shadow:0 .6vh 0 #c87a00}
+.tv-item-title strong {font-family:'Lilita One',sans-serif;font-size:clamp(23px,2.5vw,48px);font-weight:400}
+.tv-item-title span{font-family:'Fredoka',sans-serif;font-weight:700;font-style:normal}
+.tv-highest-bid{background:linear-gradient(125deg,#9a0ca5,#5b008e);border:3px solid #bd54fa;box-shadow:0 .7vh 0 #66006c,0 1vw 2vw #4a0056a8}
+.tv-highest-bid label{font-family:'Lilita One',sans-serif;letter-spacing:.02em;font-weight:400}
+.tv-highest-bid strong{font-family:'Lilita One',sans-serif;color:#ffe339;font-weight:400;text-shadow:1px 4px 0 #a06c00}
+.tv-leading{background:linear-gradient(180deg,#7405b0,#4c006c);font-family:'Lilita One',sans-serif;font-weight:400}
+.tv-character{height:100%;max-height:62vh;filter:drop-shadow(0 .9vw .5vw #62006680)}
+.tv-banner{background:linear-gradient(110deg,#fff576,#ffe13a,#ffcb11);box-shadow:0 8px 0 #b66c00;clip-path:polygon(3% 0,97% 0,100% 50%,97% 100%,3% 100%,0 50%)}
+.tv-banner strong{font-family:'Lilita One',sans-serif;font-weight:400;color:#eb0689;font-size:clamp(25px,3.4vw,61px);text-shadow:0 .18vw #fff4bb}
+.tv-banner div span{font-family:'Lilita One',sans-serif;font-weight:400;color:#51006b}
+.tv-winner-content h2{font-family:'Lilita One',sans-serif;color:#ffe933;font-weight:400;-webkit-text-stroke:5px #5c0056;paint-order:stroke fill}
+.tv-winner-content h3,.tv-winner-content>strong,.tv-winner-content p{font-family:'Lilita One',sans-serif;font-weight:400}
+.tv-controls{opacity:1;bottom:1.2vh;right:1.3vw;z-index:8}
+.tv-controls button{border:1px solid #e6b2ff7d;border-radius:13px;font-family:'Fredoka',sans-serif;font-weight:700;font-size:clamp(11px,1.2vw,17px);padding:9px 12px;box-shadow:0 4px 0 #2100358e;background:#4b006bc9}
+.tv-controls button#tvSound{background:linear-gradient(#ff58be,#c60483);border-color:#ffacde}
+.tv-controls button:hover{filter:brightness(1.13)}
+.tv-narrator-start{position:absolute;inset:0;z-index:15;display:grid;place-items:center;background:#210038b8;backdrop-filter:blur(9px);padding:20px}
+.tv-narrator-panel{width:min(92vw,510px);text-align:center;background:linear-gradient(145deg,#fffaff,#f8e8ff);border:4px solid #f6abff;border-radius:29px;padding:26px 31px 20px;box-shadow:0 13px 0 #710077,0 30px 80px #270034bf;color:#52066f}
+.tv-narrator-icon{font-size:60px}
+.tv-narrator-panel strong{font-family:'Lilita One',sans-serif;font-size:clamp(25px,3vw,40px);display:block;margin:5px 0}
+.tv-narrator-panel p{font-weight:600;font-size:16px;color:#674375}
+.tv-narrator-panel .btn{margin:9px auto 12px;max-width:350px;width:100%;font-size:19px}
+.tv-narrator-skip{background:none;border:0;display:block;margin:3px auto 10px;color:#7a4793;text-decoration:underline;font-weight:700}
+.tv-narrator-panel small{display:block;font-size:12px;color:#8c6a9c}
+.admin-view{background:linear-gradient(155deg,#faf0ff,#fbe7ff)}
+.admin-brand,.admin-heading h1,.metric strong,.panel-heading h2,.control-spotlight h3,.control-price,.package-desc h3{font-family:'Lilita One',sans-serif;font-weight:400}
+.admin-brand strong{color:#ffdf35}
+.admin-heading h1{font-size:32px}
+.admin-metrics .metric{box-shadow:0 5px 0 #e9cef3}
+.metric strong{font-size:30px}
+.admin-panel{border:2px solid #f5defe;box-shadow:0 5px 0 #e6c6f1}
+.admin-login h1{font-family:'Lilita One',sans-serif}
+@media(max-width:700px){
+ .guest-container{max-width:465px}
+ .guest-header{height:225px;padding-top:18px}
+ .brand-words{padding-left:30px}
+ .brand-words span{font-size:38px;-webkit-text-stroke:3.5px #40104c}
+ .brand-words strong{font-size:52px;-webkit-text-stroke:4px #4a093c}
+ .brand-words em{font-size:28px;-webkit-text-stroke:3px #45054f}
+ .brand-mascot{width:200px;height:218px;right:-26px;top:4px}
+ .headline-kicker{margin-top:12px;font-size:12px}
+ .tv-controls{bottom:4.5vh}
+}
+@media(max-width:390px){
+ .guest-header{height:200px}
+ .brand-words span{font-size:32px}
+ .brand-words strong{font-size:44px}
+ .brand-words em{font-size:24px}
+ .brand-mascot{width:167px;height:197px;right:-23px}
+ .headline-kicker{font-size:10px;max-width:180px}
+ .credit-pill{font-size:27px}
+}
+@media(max-aspect-ratio:1/1){
+ .tv-brand span{font-size:5vw}
+ .tv-brand strong{font-size:7.7vw}
+ .tv-brand em{font-size:3.8vw}
+ .tv-controls{bottom:1vh}
+}
+@media(prefers-reduced-motion:reduce){.brand-mascot,.tv-character{animation:none}}
