@@ -5,7 +5,7 @@ const view = location.pathname.startsWith('/admin') ? 'admin' : location.pathnam
 const currency = n => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock = ms => { const sec = Math.max(0, Math.ceil(Number(ms || 0) / 1000)); return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); };
-const state = { auction: null, me: null, guest: null, admin: null, selected: null, photo: '', editItem: null, previousBid: null, previousStatus: null, sound: false, soundContext: null, lastAdminRefresh: 0, lastMeRefresh: 0 };
+const state = { auction: null, me: null, guest: null, admin: null, selected: null, photo: '', editItem: null, previousBid: null, previousStatus: null, sound: false, soundContext: null, narratedRound: '', saidOne: false, saidTwo: false, lastAdminRefresh: 0, lastMeRefresh: 0 };
 try { state.guest = JSON.parse(localStorage.getItem('agnes_auction_guest') || 'null'); } catch { localStorage.removeItem('agnes_auction_guest'); }
 const imageOf = item => item?.image || '/assets/mystery-gift.svg';
 const statusName = status => ({ idle: 'Aguardando', live: 'Ao vivo', paused: 'Pausado', settling: 'Finalizando', sold: 'Encerrado' })[status] || 'Aguardando';
@@ -37,10 +37,20 @@ function applyAuction(value) {
   const newWinner = old && old.status !== 'sold' && value.game.status === 'sold' && value.game.topGuestId;
   state.auction = value;
   if (bidChanged && value.game.topAmount) {
-    if (view === 'tv' && state.sound) ding(2);
+    if (view === 'tv') {
+      state.narratedRound = value.game.itemId + ':' + value.game.topGuestId + ':' + value.game.topAmount;
+      state.saidOne = false; state.saidTwo = false;
+      if (state.sound) {
+        ding(2);
+        announce(value.game.topGuestName + ' deu um lance de ' + spokenMoney(value.game.topAmount) + '! Quem vai dar mais?');
+      }
+    }
     if (view === 'guest' && state.selected !== null) state.selected = null;
   }
-  if (newWinner && view === 'tv' && state.sound) ding(4);
+  if (newWinner && view === 'tv' && state.sound) {
+    ding(4);
+    announce('Arrematado! ' + value.game.topGuestName + ' levou ' + (value.active?.name || 'o pacote surpresa') + ' por ' + spokenMoney(value.game.topAmount) + '! Parabéns!');
+  }
   if (view === 'guest') {
     renderGuest();
     if (bidChanged || newWinner) refreshMe(false);
@@ -58,6 +68,19 @@ function onTick(ms) {
   if (view === 'tv' && $('tvTimer')) $('tvTimer').textContent = time;
   if (view === 'guest' && $('guestTimer')) $('guestTimer').textContent = time;
   if (view === 'admin' && $('controlTimer')) $('controlTimer').textContent = time;
+  if (view === 'tv' && state.sound && state.auction?.game?.topAmount > 0) {
+    const g = state.auction.game;
+    const round = g.itemId + ':' + g.topGuestId + ':' + g.topAmount;
+    if (round !== state.narratedRound) { state.narratedRound = round; state.saidOne = false; state.saidTwo = false; }
+    if (ms > 0 && ms <= 11500 && !state.saidOne) {
+      state.saidOne = true;
+      announce('Dou-lhe uma! ' + spokenMoney(g.topAmount) + ' para ' + g.topGuestName + '!');
+    }
+    if (ms > 0 && ms <= 5600 && !state.saidTwo) {
+      state.saidTwo = true;
+      announce('Dou-lhe duas! Última chance! ' + spokenMoney(g.topAmount) + '!');
+    }
+  }
 }
 function renderGuest() {
   const joined = !!state.me;
@@ -171,6 +194,44 @@ function ding(count) {
     }
   } catch {}
 }
+// Narração por síntese de voz do navegador: não depende de API paga.
+function spokenMoney(value) {
+  const amount = Number(value) || 0;
+  if (!Number.isFinite(amount)) return 'zero créditos';
+  // A interface usa R$ apenas como aparência: todos os valores são fictícios.
+  return amount.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' créditos';
+}
+function announce(message) {
+  if (!state.sound || view !== 'tv' || !('speechSynthesis' in window)) return;
+  try {
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const line = new SpeechSynthesisUtterance(message);
+    line.lang = 'pt-BR';
+    line.rate = 1.03;
+    line.pitch = 1.04;
+    line.volume = 1;
+    const voices = synth.getVoices();
+    line.voice = voices.find(v => /^pt[-_]br$/i.test(v.lang) && v.localService)
+      || voices.find(v => /^pt[-_]br$/i.test(v.lang))
+      || voices.find(v => /^pt/i.test(v.lang))
+      || null;
+    synth.speak(line);
+  } catch (error) { console.warn('Voz não disponível:', error); }
+}
+function changeNarrator(enabled) {
+  if (enabled && !('speechSynthesis' in window)) {
+    toast('Este navegador não tem narração por voz. Use Chrome ou Edge na TV.', true);
+    enabled = false;
+  }
+  state.sound = enabled;
+  $('tvNarratorStart').hidden = true;
+  $('tvSound').textContent = enabled ? '🔊 Narrador ligado' : '🔇 Ligar narrador';
+  if (enabled) {
+    ding(2);
+    announce('Atenção, atenção! O Leilão Surpresa da Agnes está no ar! Preparem seus lances!');
+  } else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+}
 function renderTV(animate) {
   const a=state.auction || {}; const game=a.game || {}; const item=a.active;
   $('tvGift').src = imageOf(item);
@@ -203,11 +264,9 @@ function initTV() {
     try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); }
     catch { toast('Tela cheia não disponível neste navegador.', true); }
   });
-  $('tvSound').addEventListener('click', () => {
-    state.sound = !state.sound;
-    $('tvSound').textContent = state.sound ? '🔊 Som ligado' : '🔇 Som desligado';
-    if (state.sound) ding(2);
-  });
+  $('tvSound').addEventListener('click', () => changeNarrator(!state.sound));
+  $('tvNarratorEnable').addEventListener('click', () => changeNarrator(true));
+  $('tvNarratorSkip').addEventListener('click', () => changeNarrator(false));
   refreshAuction();
 }
 function itemById(itemId) { return state.admin?.items?.find(i => (i.id || i._id) === itemId); }
