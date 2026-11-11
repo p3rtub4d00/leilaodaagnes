@@ -192,7 +192,7 @@ function renderTV(animate) {
     $('tvWinnerName').textContent = game.topGuestName;
   }
   if (animate) {
-    for (const el of [$('tvHighestBid'), $('tvBanner')].filter(Boolean)) {
+    for (const el of [$('tvCurrentBid'), $('tvBanner')].filter(Boolean)) {
       el.classList.remove('new-bid-pop'); void el.offsetWidth; el.classList.add('new-bid-pop');
     }
   }
